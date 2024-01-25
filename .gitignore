@@ -1,0 +1,11 @@
+.vscode
+register/accounts
+register/register*
+test
+python
+__debug*
+/.envrc
+/.netrc
+pgadmin
+db
+sesIs.sql
