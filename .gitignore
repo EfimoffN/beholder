@@ -9,3 +9,5 @@ __debug*
 pgadmin
 db
 sesIs.sql
+
+session_tg.json
