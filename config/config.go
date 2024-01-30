@@ -2,62 +2,121 @@ package config
 
 import (
 	"errors"
-	"flag"
+	"os"
+	"strconv"
 
 	"github.com/EfimoffN/beholder/types"
 )
 
 var (
-	ErrFlagSessionTG       = errors.New("flag session accaunt id telegram is empty")
-	ErrNoAllParametersPSG  = errors.New("there are not all parameters for Postgres")
-	ErrNoAllParameterKafka = errors.New("there are not parameters for Kafka")
+	ErrEnvPortGRPCEmpty    = errors.New("env grpc port is empty")
+	ErrEnvSessionFileEmpty = errors.New("env session file is empty")
+	ErrEnvPhoneNumberEmpty = errors.New("env phone number empty")
+	ErrEnvAppIDEmpty       = errors.New("env app id is empty")
+	ErrEnvAppHASHEmpty     = errors.New("env app hash empty")
+	ErrEnvSessOptMinEmpty  = errors.New("env session opt min is empty")
+	ErrEnvSessOptMaxEmpty  = errors.New("env session opt max is empty")
+	ErrEnvBrokerProducer   = errors.New("env broker producer opt is empty")
+	ErrEnvTopicProducer    = errors.New("env topic producer opt is empty")
+	ErrEnvGroupProducer    = errors.New("env group producer opt is empty")
 )
 
 func CreateConfig() (*types.ConfigApp, error) {
 	cfg := types.ConfigApp{}
 
-	flag.StringVar(&cfg.SessionTG, "a", "", "accaunt")
-	flag.StringVar(&cfg.ConfigDB.User, "u", "", "userPSG")
-	flag.StringVar(&cfg.ConfigDB.Password, "pa", "", "passwordPSG")
-	flag.StringVar(&cfg.ConfigDB.DBname, "d", "", "dbnamePSG")
-	flag.StringVar(&cfg.ConfigDB.SSLmode, "s", "", "sslmodePSG")
-	flag.StringVar(&cfg.ConfigDB.Port, "po", "", "portPSG")
-	flag.StringVar(&cfg.ConfigDB.Host, "h", "", "hostPSG")
-	flag.StringVar(&cfg.ConfigKfk, "k", "", "kafka")
-
-	flag.Parse()
-
-	if cfg.SessionTG == "" {
-		return nil, ErrFlagSessionTG
+	beholderTG, err := getBeholderTGConfig()
+	if err != nil {
+		return nil, err
 	}
 
-	if cfg.ConfigDB.User == "" {
-		return nil, ErrNoAllParametersPSG
+	cfg.BeholderTG = *beholderTG
+
+	configKfk, err := getProducerKfk()
+	if err != nil {
+		return nil, err
 	}
 
-	if cfg.ConfigDB.Password == "" {
-		return nil, ErrNoAllParametersPSG
-	}
-
-	if cfg.ConfigDB.DBname == "" {
-		return nil, ErrNoAllParametersPSG
-	}
-
-	if cfg.ConfigDB.SSLmode == "" {
-		return nil, ErrNoAllParametersPSG
-	}
-
-	if cfg.ConfigDB.Port == "" {
-		return nil, ErrNoAllParametersPSG
-	}
-
-	if cfg.ConfigDB.Host == "" {
-		return nil, ErrNoAllParametersPSG
-	}
-
-	if cfg.ConfigKfk == "" {
-		return nil, ErrNoAllParameterKafka
-	}
+	cfg.ConfigKfk = *configKfk
 
 	return &cfg, nil
+}
+
+func getBeholderTGConfig() (*types.SessionTG, error) {
+	beholderTG := types.SessionTG{}
+
+	beholderTG.Port = os.Getenv("PORT")
+	if beholderTG.Port == "" {
+		return nil, ErrEnvPortGRPCEmpty
+	}
+
+	beholderTG.SessionTG = os.Getenv("SESSION_TG")
+	if beholderTG.SessionTG == "" {
+		return nil, ErrEnvSessionFileEmpty
+	}
+
+	beholderTG.PhoneNumber = os.Getenv("PHONE_NUMBER")
+	if beholderTG.SessionTG == "" {
+		return nil, ErrEnvPhoneNumberEmpty
+	}
+
+	appID := os.Getenv("APP_ID")
+	if appID == "" {
+		return nil, ErrEnvAppIDEmpty
+	}
+
+	ad, err := strconv.Atoi(appID)
+	if err != nil {
+		return nil, err
+	}
+
+	beholderTG.AppID = ad
+
+	beholderTG.AppHASH = os.Getenv("APP_HASH")
+	if beholderTG.AppHASH == "" {
+		return nil, ErrEnvAppHASHEmpty
+	}
+
+	sessionOptMax := os.Getenv("SESS_OPT_MIN")
+	if sessionOptMax == "" {
+		return nil, ErrEnvSessOptMaxEmpty
+	}
+
+	sMax, err := strconv.Atoi(sessionOptMax)
+	if err != nil {
+		return nil, err
+	}
+
+	beholderTG.SessionOptMax = sMax
+
+	sessionOptMin := os.Getenv("SESS_OPT_MAX")
+	if sessionOptMin == "" {
+		return nil, ErrEnvSessOptMinEmpty
+	}
+
+	sMin, err := strconv.Atoi(sessionOptMin)
+	if err != nil {
+		return nil, err
+	}
+
+	beholderTG.SessionOptMin = sMin
+
+	return &beholderTG, nil
+}
+
+func getProducerKfk() (*types.ProducerKfk, error) {
+	producerKfk := types.ProducerKfk{}
+
+	if producerKfk.ProducerBroker == os.Getenv("BROKER") {
+		return nil, ErrEnvBrokerProducer
+	}
+
+	if producerKfk.ProducerBroker == os.Getenv("TOPIC") {
+		return nil, ErrEnvTopicProducer
+	}
+
+	if producerKfk.ProducerBroker == os.Getenv("GROUP") {
+		return nil, ErrEnvGroupProducer
+	}
+
+	return &producerKfk, nil
 }
