@@ -2,7 +2,9 @@ package tg_beholder
 
 import (
 	"context"
+	"strconv"
 
+	"github.com/EfimoffN/beholder/types"
 	"github.com/gotd/td/telegram/message"
 	"github.com/gotd/td/telegram/updates"
 
@@ -10,12 +12,12 @@ import (
 	"go.uber.org/zap"
 )
 
-func (tgc *TgBeholder) CheckedPosts() error {
+func (tgb *TgBeholder) CheckedPosts() error {
 	log := zap.NewExample()
 
-	api := tgc.client.API()
+	api := tgb.client.API()
 
-	self, err := tgc.client.Self(tgc.ctx)
+	self, err := tgb.client.Self(tgb.ctx)
 	if err != nil {
 		log.Info(err.Error())
 		return err
@@ -30,19 +32,35 @@ func (tgc *TgBeholder) CheckedPosts() error {
 	// 	})
 
 	// Setup message update handlers.
-	tgc.dispatcher.OnNewChannelMessage(func(ctx context.Context, e tg.Entities, update *tg.UpdateNewChannelMessage) error {
+	tgb.dispatcher.OnNewChannelMessage(func(ctx context.Context, e tg.Entities, update *tg.UpdateNewChannelMessage) error {
 		if update.Message.String() == "" {
 			log.Info("Message", zap.Any("message", update.Message))
 		}
 
 		log.Info("Channel message", zap.Any("message", update.Message))
+
+		message := update.Message
+
+		pub, ok := message.(*tg.Message)
+		if !ok {
+			return nil
+		}
+		// добавить поиск каналов по id
+		acceptedPublication := types.AcceptedPublication{
+			// ChannelTgID: update.Message,
+			ChannelTgID: int64(message.GetID()),
+			MessageLink: "https://t.me/" + pub.PostAuthor + "/" + strconv.Itoa(pub.ID),
+		}
+
+		tgb.PostSend <- acceptedPublication
+
 		return nil
 	})
 
 	// Create message sending helper.
-	sender := message.NewSender(tgc.client.API())
+	sender := message.NewSender(tgb.client.API())
 
-	tgc.dispatcher.OnNewMessage(func(ctx context.Context, e tg.Entities, update *tg.UpdateNewMessage) error {
+	tgb.dispatcher.OnNewMessage(func(ctx context.Context, e tg.Entities, update *tg.UpdateNewMessage) error {
 		// if update.Message.String() == "" {
 		// 	log.Info("Message", zap.Any("message", update.Message))
 		// }
@@ -61,7 +79,7 @@ func (tgc *TgBeholder) CheckedPosts() error {
 		return err
 	})
 
-	tgc.client.Run(tgc.ctx, func(ctx context.Context) error {
+	tgb.client.Run(tgb.ctx, func(ctx context.Context) error {
 		// Perform auth if no session is available.
 		// if err := client.Auth().IfNecessary(ctx, flow); err != nil {
 		// 	return errors.Wrap(err, "auth")
@@ -72,7 +90,7 @@ func (tgc *TgBeholder) CheckedPosts() error {
 		// if err != nil {
 		// 	return errors.Wrap(err, "call self")
 		// }
-		err = tgc.gupMsg.Run(tgc.ctx, api, self.ID, updates.AuthOptions{
+		err = tgb.gupMsg.Run(tgb.ctx, api, self.ID, updates.AuthOptions{
 			OnStart: func(ctx context.Context) {
 				log.Info("Gaps started")
 			},
@@ -81,7 +99,7 @@ func (tgc *TgBeholder) CheckedPosts() error {
 		return err
 	})
 
-	err = tgc.gupMsg.Run(tgc.ctx, api, self.ID, updates.AuthOptions{
+	err = tgb.gupMsg.Run(tgb.ctx, api, self.ID, updates.AuthOptions{
 		OnStart: func(ctx context.Context) {
 			log.Info("Gaps started")
 		},

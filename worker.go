@@ -2,19 +2,11 @@ package main
 
 import (
 	"context"
-	"errors"
 
 	"github.com/EfimoffN/beholder/kfkapi"
 	"github.com/EfimoffN/beholder/tg_beholder"
+	"github.com/goccy/go-json"
 	"github.com/rs/zerolog"
-)
-
-var errAlreadyExists = errors.New("can't create a file that already exists")
-var errMsgConvert = errors.New("can't convert message")
-
-const (
-	sessionOptMin = 2000
-	sessionOptMax = 3000
 )
 
 type Worker struct {
@@ -38,5 +30,45 @@ func CreateWork(
 }
 
 func (w *Worker) WorkerFunc(topicProducer string, ctx context.Context) error {
+	go func() {
+		w.beholder.CheckedPosts()
+	}()
 
+	for {
+		select {
+		case <-ctx.Done():
+			w.beholder.Stop()
+			w.log.Debug().Msg("stoped beholder")
+			w.producer.ProducerClose()
+
+			for msg := range w.beholder.PostSend {
+				result, err := json.Marshal(msg)
+				if err != nil {
+					w.log.Error().Err(err)
+					continue
+				}
+
+				err = w.producer.SendPost(string(result), topicProducer)
+				if err != nil {
+					w.log.Error().Err(err)
+					continue
+				}
+			}
+
+			return nil
+		case msg := <-w.beholder.PostSend:
+			result, err := json.Marshal(msg)
+			if err != nil {
+				w.log.Error().Err(err)
+				continue
+			}
+
+			err = w.producer.SendPost(string(result), topicProducer)
+			if err != nil {
+				w.log.Error().Err(err)
+			}
+
+			return nil
+		}
+	}
 }

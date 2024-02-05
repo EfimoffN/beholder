@@ -115,6 +115,8 @@ func (tgc *TgBeholder) Authorize() error {
 
 func (tgc *TgBeholder) Stop() {
 	close(tgc.done)
+
+	close(tgc.PostSend)
 }
 
 func CreateTgBeholder(
