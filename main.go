@@ -3,12 +3,18 @@ package main
 import (
 	"context"
 	"os"
+	"os/signal"
 
 	"github.com/EfimoffN/beholder/config"
+	"github.com/EfimoffN/beholder/kfkapi"
+	"github.com/EfimoffN/beholder/tg_beholder"
 	"github.com/rs/zerolog"
 )
 
 func main() {
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
+	defer cancel()
+
 	log := zerolog.New(os.Stdout).
 		With().
 		Timestamp().
@@ -23,19 +29,34 @@ func main() {
 		return
 	}
 
-	// psgConnect, err := connectDB(config.ConfigDB)
-	// if err != nil {
-	// 	log.Error().Err(err)
+	tgClient := tg_beholder.CreateTgBeholder(
+		config.BeholderTG.PhoneNumber,
+		config.BeholderTG.AppHASH,
+		config.BeholderTG.SessionTG,
+		config.BeholderTG.AppID,
+		config.BeholderTG.SessionOptMin,
+		config.BeholderTG.SessionOptMax,
+		config.BeholderTG.CapChan,
+		ctx,
+	)
 
-	// 	return
-	// }
-	// defer psgConnect.Close()
+	err = tgClient.Authorize()
+	if err != nil {
+		log.Error().Err(err)
 
-	wrk := CreateWork(log, config.SessionTG, context.Background())
+		return
+	}
 
-	// wrk := CreateWork(apiDB, log, config.SessionTG, context.Background(), kfk)
+	kfk, err := kfkapi.CreateKafkaProducer([]string{config.ConfigKfk.ProducerBroker}, log, config.ConfigKfk.ProducerTopic)
+	if err != nil {
+		log.Error().Err(err)
 
-	err = wrk.Work()
+		return
+	}
+
+	wrk := CreateWork(log, kfk, &tgClient)
+
+	err = wrk.WorkerFunc(config.ConfigKfk.ProducerTopic, ctx)
 	if err != nil {
 		log.Error().Err(err).Msg("process work failed")
 
@@ -43,5 +64,4 @@ func main() {
 	}
 
 	log.Debug().Msg("process work finished successfully")
-
 }

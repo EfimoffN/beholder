@@ -38,6 +38,7 @@ require (
 	github.com/gotd/ige v0.2.2 // indirect
 	github.com/gotd/neo v0.1.5 // indirect
 	github.com/jmoiron/sqlx v1.3.5
+	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/klauspost/compress v1.17.4 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.19 // indirect
