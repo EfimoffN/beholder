@@ -1,4 +1,4 @@
-package tgcrawl
+package tg_beholder
 
 import (
 	"bufio"
@@ -6,17 +6,17 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"time"
 
+	"github.com/EfimoffN/beholder/types"
 	"github.com/gotd/contrib/bg"
-	"github.com/gotd/contrib/middleware/ratelimit"
 	"github.com/gotd/td/session"
 	"github.com/gotd/td/telegram"
 	"github.com/gotd/td/telegram/auth"
+	"github.com/gotd/td/telegram/updates"
+	updhook "github.com/gotd/td/telegram/updates/hook"
 	"github.com/gotd/td/tg"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
-	"golang.org/x/time/rate"
 )
 
 // noSignUp can be embedded to prevent signing up.
@@ -56,16 +56,29 @@ func (a termAuth) Code(_ context.Context, _ *tg.AuthSentCode) (string, error) {
 	return strings.TrimSpace(code), nil
 }
 
-func (tgc *TgCrawler) Authorize() error {
+func (tgc *TgBeholder) Authorize() error {
 	log := zap.NewExample()
+
+	dispatcher := tg.NewUpdateDispatcher()
+	gaps := updates.New(updates.Config{
+		Handler: dispatcher,
+		Logger:  log.Named("gaps"),
+	})
+
+	tgc.gupMsg = gaps
+	tgc.dispatcher = dispatcher
 
 	tgOption := telegram.Options{
 		SessionStorage: &session.FileStorage{
 			Path: tgc.fileStorage,
 		},
-		Logger: log,
+		UpdateHandler: gaps,
+		Logger:        log,
+		// Middlewares: []telegram.Middleware{
+		// 	ratelimit.New(rate.Every(time.Millisecond*200), 3),
+		// },
 		Middlewares: []telegram.Middleware{
-			ratelimit.New(rate.Every(time.Millisecond*200), 3),
+			updhook.UpdateHook(gaps.Handle),
 		},
 	}
 
@@ -100,6 +113,31 @@ func (tgc *TgCrawler) Authorize() error {
 	return nil
 }
 
-func (tgc *TgCrawler) Stop() {
+func (tgc *TgBeholder) Stop() {
 	close(tgc.done)
+}
+
+func CreateTgBeholder(
+	phoneNumber,
+	appHASH,
+	fileStorage string,
+	appID,
+	sessionOptMin,
+	sessionOptMax int,
+	capChan int,
+	ctx context.Context) TgBeholder {
+
+	tgClient := TgBeholder{
+		phoneNumber:   phoneNumber,
+		appID:         appID,
+		appHASH:       appHASH,
+		fileStorage:   fileStorage,
+		ctx:           ctx,
+		sessionOptMin: sessionOptMin, // minimum value of random delay in milliseconds
+		sessionOptMax: sessionOptMax, // maximum value of random delay in milliseconds
+
+		PostSend: make(chan types.AcceptedPublication, capChan),
+	}
+
+	return tgClient
 }

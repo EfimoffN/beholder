@@ -5,23 +5,25 @@ type ConfigApp struct {
 	ConfigKfk  ProducerKfk
 }
 
-type ReadyRepost struct {
-	ChannelTgID int64  `json:"ChannelTgID"`
-	MessageLink string `json:"MessageLink"`
-}
-
 type SessionTG struct {
-	Port          string
-	SessionTG     string
-	PhoneNumber   string
-	AppID         int
-	AppHASH       string
-	SessionOptMin int // minimum value of random delay in milliseconds
-	SessionOptMax int // maximum value of random delay in milliseconds
+	Port          string `required:"true"`
+	SessionTG     string `required:"true"`
+	PhoneNumber   string `required:"true"`
+	AppID         int    `required:"true"`
+	AppHASH       string `required:"true"`
+	SessionOptMin int    `required:"true"` // minimum value of random delay in milliseconds
+	SessionOptMax int    `required:"true"` // maximum value of random delay in milliseconds
+	CapChan       int    `default:"100"`
 }
 
 type ProducerKfk struct {
-	ProducerGroup  string
-	ProducerTopic  string
-	ProducerBroker string
+	ProducerGroup  string `required:"true"`
+	ProducerTopic  string `required:"true"`
+	ProducerBroker string `required:"true"`
+}
+
+type AcceptedPublication struct {
+	ChannelTgID int64  `json:"ChannelTgID"`
+	MessageLink string `json:"MessageLink"`
+	MessageID   int64  `json:"MessageID"`
 }

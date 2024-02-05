@@ -1,13 +1,16 @@
-package tgcrawl
+package tg_beholder
 
 import (
 	"context"
 
+	"github.com/EfimoffN/beholder/types"
 	"github.com/gotd/td/telegram"
+	"github.com/gotd/td/telegram/updates"
+	"github.com/gotd/td/tg"
 	"github.com/rs/zerolog"
 )
 
-type TgCrawler struct {
+type TgBeholder struct {
 	Logger        zerolog.Logger
 	client        *telegram.Client
 	done          chan (struct{})
@@ -18,6 +21,11 @@ type TgCrawler struct {
 	ctx           context.Context
 	sessionOptMin int // minimum value of random delay in milliseconds
 	sessionOptMax int // maximum value of random delay in milliseconds
+
+	gupMsg     *updates.Manager
+	dispatcher tg.UpdateDispatcher
+
+	PostSend chan (types.AcceptedPublication)
 }
 
 type SessionData struct {
@@ -72,29 +80,4 @@ type DCOptions struct {
 	IPAddress         string      `json:"IPAddress"`
 	Port              int         `json:"Port"`
 	Secret            interface{} `json:"Secret"`
-}
-
-func InitTgCrawler(
-	logger zerolog.Logger,
-	phone string,
-	fileSt string,
-	appID int,
-	appHASH string,
-	ctx context.Context,
-	sessionOptMin,
-	sessionOptMax int,
-) *TgCrawler {
-	crawler := &TgCrawler{
-		Logger:        logger,
-		done:          make(chan struct{}),
-		phoneNumber:   phone,
-		fileStorage:   fileSt,
-		ctx:           ctx,
-		appID:         appID,
-		appHASH:       appHASH,
-		sessionOptMin: sessionOptMin,
-		sessionOptMax: sessionOptMax,
-	}
-
-	return crawler
 }
