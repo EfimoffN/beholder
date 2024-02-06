@@ -56,7 +56,7 @@ func (a termAuth) Code(_ context.Context, _ *tg.AuthSentCode) (string, error) {
 	return strings.TrimSpace(code), nil
 }
 
-func (tgc *TgBeholder) Authorize() error {
+func (tgb *TgBeholder) Authorize() error {
 	log := zap.NewExample()
 
 	dispatcher := tg.NewUpdateDispatcher()
@@ -65,27 +65,24 @@ func (tgc *TgBeholder) Authorize() error {
 		Logger:  log.Named("gaps"),
 	})
 
-	tgc.gupMsg = gaps
-	tgc.dispatcher = dispatcher
+	tgb.gupMsg = gaps
+	tgb.dispatcher = dispatcher
 
 	tgOption := telegram.Options{
 		SessionStorage: &session.FileStorage{
-			Path: tgc.fileStorage,
+			Path: tgb.fileStorage,
 		},
 		UpdateHandler: gaps,
 		Logger:        log,
-		// Middlewares: []telegram.Middleware{
-		// 	ratelimit.New(rate.Every(time.Millisecond*200), 3),
-		// },
 		Middlewares: []telegram.Middleware{
 			updhook.UpdateHook(gaps.Handle),
 		},
 	}
 
-	client := telegram.NewClient(tgc.appID, tgc.appHASH, tgOption)
+	client := telegram.NewClient(tgb.appID, tgb.appHASH, tgOption)
 
 	flow := auth.NewFlow(
-		termAuth{phone: tgc.phoneNumber},
+		termAuth{phone: tgb.phoneNumber},
 		auth.SendCodeOptions{},
 	)
 
@@ -96,7 +93,7 @@ func (tgc *TgBeholder) Authorize() error {
 
 	go func() {
 		for {
-			if _, ok := <-tgc.done; !ok {
+			if _, ok := <-tgb.done; !ok {
 				_ = stop()
 
 				return
@@ -104,19 +101,19 @@ func (tgc *TgBeholder) Authorize() error {
 		}
 	}()
 
-	if err = client.Auth().IfNecessary(tgc.ctx, flow); err != nil {
+	if err = client.Auth().IfNecessary(tgb.ctx, flow); err != nil {
 		return errors.Wrapf(err, "failed if necessary")
 	}
 
-	tgc.client = client
+	tgb.client = client
 
 	return nil
 }
 
-func (tgc *TgBeholder) Stop() {
-	close(tgc.done)
+func (tgb *TgBeholder) Stop() {
+	close(tgb.done)
 
-	close(tgc.PostSend)
+	close(tgb.PostSend)
 }
 
 func CreateTgBeholder(

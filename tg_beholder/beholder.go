@@ -24,14 +24,6 @@ func (tgb *TgBeholder) CheckedPosts() error {
 		return err
 	}
 
-	// d := tg.NewUpdateDispatcher()
-
-	// gaps := updates.New(
-	// 	updates.Config{
-	// 		Handler: d,
-	// 		Logger:  log,
-	// 	})
-
 	// Setup message update handlers.
 	tgb.dispatcher.OnNewChannelMessage(func(ctx context.Context, e tg.Entities, update *tg.UpdateNewChannelMessage) error {
 		if update.Message.String() == "" {
@@ -73,13 +65,6 @@ func (tgb *TgBeholder) CheckedPosts() error {
 	sender := message.NewSender(tgb.client.API())
 
 	tgb.dispatcher.OnNewMessage(func(ctx context.Context, e tg.Entities, update *tg.UpdateNewMessage) error {
-		// if update.Message.String() == "" {
-		// 	log.Info("Message", zap.Any("message", update.Message))
-		// }
-
-		// log.Info("Message", zap.Any("message", update.Message))
-		// return nil
-
 		// Don't echo service message.
 		msg, ok := update.Message.(*tg.Message)
 		if !ok {
@@ -91,17 +76,7 @@ func (tgb *TgBeholder) CheckedPosts() error {
 		return err
 	})
 
-	tgb.client.Run(tgb.ctx, func(ctx context.Context) error {
-		// Perform auth if no session is available.
-		// if err := client.Auth().IfNecessary(ctx, flow); err != nil {
-		// 	return errors.Wrap(err, "auth")
-		// }
-
-		// Fetch user info.
-		// user, err := client.Self(ctx)
-		// if err != nil {
-		// 	return errors.Wrap(err, "call self")
-		// }
+	err = tgb.client.Run(tgb.ctx, func(ctx context.Context) error {
 		err = tgb.gupMsg.Run(tgb.ctx, api, self.ID, updates.AuthOptions{
 			OnStart: func(ctx context.Context) {
 				log.Info("Gaps started")
@@ -111,6 +86,11 @@ func (tgb *TgBeholder) CheckedPosts() error {
 		return err
 	})
 
+	if err != nil {
+		log.Error(err.Error())
+		return err
+	}
+
 	err = tgb.gupMsg.Run(tgb.ctx, api, self.ID, updates.AuthOptions{
 		OnStart: func(ctx context.Context) {
 			log.Info("Gaps started")
@@ -119,10 +99,9 @@ func (tgb *TgBeholder) CheckedPosts() error {
 
 	if err != nil {
 		log.Info(err.Error())
-	}
-	// msgs, err := api.
+		return err
 
-	// https://github.com/gotd/td/blob/main/examples/updates/main.go
+	}
 
 	return nil
 }
