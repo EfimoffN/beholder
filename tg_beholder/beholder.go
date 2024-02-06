@@ -46,22 +46,22 @@ func (tgb *TgBeholder) CheckedPosts() error {
 		if !ok {
 			return nil
 		}
-		// tgId := pub.FromID
-		// channel, err := tgb.SerchChannelByID(0)
-		// if err != nil {
-		// 	return err
-		// }
 
 		ch, ok := pub.PeerID.(*tg.PeerChannel)
 		if !ok {
 			return nil
 		}
 
+		channel, err := tgb.SerchChannelByID(ch.ChannelID)
+		if err != nil {
+			return err
+		}
+
 		// добавить поиск каналов по id
 		acceptedPublication := types.AcceptedPublication{
 			MessageID:   int64(pub.ID),
 			ChannelTgID: ch.ChannelID,
-			MessageLink: "https://t.me/" + pub.PostAuthor + "/" + strconv.Itoa(pub.ID),
+			MessageLink: "https://t.me/" + channel.Username + "/" + strconv.Itoa(pub.ID),
 		}
 
 		tgb.PostSend <- acceptedPublication

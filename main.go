@@ -20,7 +20,7 @@ func main() {
 		Timestamp().
 		Logger()
 
-	log.Info().Msg("Service run")
+	log.Info().Msg("Service beholder run")
 
 	config, err := config.CreateConfig()
 	if err != nil {

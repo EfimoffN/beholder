@@ -67,8 +67,6 @@ func (w *Worker) WorkerFunc(topicProducer string, ctx context.Context) error {
 			if err != nil {
 				w.log.Error().Err(err)
 			}
-
-			return nil
 		}
 	}
 }
