@@ -33,4 +33,5 @@ CREATE TABLE if not exists ref_client_session(
     refid UUID PRIMARY KEY DEFAULT gen_random_uuid (),
     clientid UUID NOT NULL,
     sessionid UUID NOT NULL,
+    expirationdate timestamp NOT NULL
 );
