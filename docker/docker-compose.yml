@@ -10,7 +10,9 @@ services:
     volumes:
       # - .:/docker-entrypoint-initdb.d
       - ./db:/var/lib/postgresql/data
-      - ../SQL/02042023_CreateTables.sql:/docker-entrypoint-initdb.d/02042023_CreateTables.sql
+      - ../SQL/05032024_CreateTables.sql:/docker-entrypoint-initdb.d/05032024_CreateTables.sql
+      # - ../SQL/02042023_CreateTables.sql:/docker-entrypoint-initdb.d/02042023_CreateTables.sql
+
     ports:
       - "5432:5432"
     networks:
