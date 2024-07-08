@@ -27,3 +27,12 @@ type AcceptedPublication struct {
 	MessageLink string `json:"MessageLink"`
 	MessageID   int64  `json:"MessageID"`
 }
+
+type AcceptedPublication2 struct {
+	ChannelTgID      int64  `json:"ChannelTgID"`
+	ChatTgID         int64  `json:"ChatTgID"`
+	MessageChannelID int64  `json:"MessageChannelID"`
+	MessageChatID    int64  `json:"MessageChatID"`
+	Created          int64  `json:"Created"`
+	TextMessage      string `json:"TextMessage"`
+}

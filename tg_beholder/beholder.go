@@ -50,6 +50,11 @@ func (tgb *TgBeholder) CheckedPosts() error {
 		}
 
 		// добавить поиск каналов по id
+		// добавлять ID родительскокго канала, ID группы комментов
+		// Id публикации
+		// время публикации
+		// Id для комментария в чате (если есть)
+
 		acceptedPublication := types.AcceptedPublication{
 			MessageID:   int64(pub.ID),
 			ChannelTgID: ch.ChannelID,

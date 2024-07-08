@@ -29,7 +29,7 @@ func main() {
 		return
 	}
 
-	tgClient := tg_beholder.CreateTgBeholder(
+	tgClient := tg_beholder.CreateTgBeholder( // получать настрйоки аккаунта из БД
 		config.BeholderTG.PhoneNumber,
 		config.BeholderTG.AppHASH,
 		config.BeholderTG.SessionTG,
