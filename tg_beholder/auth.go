@@ -135,7 +135,7 @@ func CreateTgBeholder(
 		sessionOptMin: sessionOptMin, // minimum value of random delay in milliseconds
 		sessionOptMax: sessionOptMax, // maximum value of random delay in milliseconds
 
-		PostSend: make(chan types.AcceptedPublication, capChan),
+		PostSend: make(chan types.AcceptedPublication2, capChan),
 	}
 
 	return tgClient
