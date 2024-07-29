@@ -19,6 +19,8 @@ import (
 	"go.uber.org/zap"
 )
 
+var errAlreadyExists = errors.New("can't create a file that already exists")
+
 // noSignUp can be embedded to prevent signing up.
 type noSignUp struct{}
 
@@ -119,14 +121,22 @@ func (tgb *TgBeholder) Stop() {
 func CreateTgBeholder(
 	phoneNumber,
 	appHASH,
-	fileStorage string,
+	sessionTgTxt string,
 	appID,
 	sessionOptMin,
 	sessionOptMax int,
 	capChan int,
-	ctx context.Context) TgBeholder {
+	ctx context.Context,
+) (*TgBeholder, error) {
 
-	tgClient := TgBeholder{
+	fileStorage := "beholder_" + appHASH + ".json"
+
+	err := createSession(fileStorage, []byte(sessionTgTxt))
+	if err != nil {
+		return nil, err
+	}
+
+	tgClient := &TgBeholder{
 		phoneNumber:   phoneNumber,
 		appID:         appID,
 		appHASH:       appHASH,
@@ -138,5 +148,26 @@ func CreateTgBeholder(
 		PostSend: make(chan types.AcceptedPublication2, capChan),
 	}
 
-	return tgClient
+	return tgClient, nil
+}
+
+func createSession(name string, val []byte) error {
+	_, err := os.Stat(name)
+	if os.IsExist(err) {
+
+		return errAlreadyExists
+	}
+
+	file, err := os.Create(name)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	_, err = file.Write(val)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

@@ -17,7 +17,7 @@ type ChannelRow struct {
 
 type PrjSessionRow struct {
 	SessionID   string `db:"sessionid"`
-	Appid       string `db:"appid"`
+	AppID       int    `db:"appid"`
 	AppHash     string `db:"apphash"`
 	PhoneNumber string `db:"phonenumber"`
 	Sessiontxt  string `db:"sessiontxt"`

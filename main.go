@@ -2,13 +2,20 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/signal"
 
 	"github.com/EfimoffN/beholder/config"
 	"github.com/EfimoffN/beholder/kfkapi"
+	"github.com/EfimoffN/beholder/sqlapi"
 	"github.com/EfimoffN/beholder/tg_beholder"
+	"github.com/EfimoffN/beholder/types"
+
+	"github.com/jmoiron/sqlx"
+	_ "github.com/lib/pq"
 	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 func main() {
@@ -29,16 +36,39 @@ func main() {
 		return
 	}
 
-	tgClient := tg_beholder.CreateTgBeholder( // получать настрйоки аккаунта из БД
-		config.BeholderTG.PhoneNumber,
-		config.BeholderTG.AppHASH,
-		config.BeholderTG.SessionTG,
-		config.BeholderTG.AppID,
+	db, err := connectDB(config.ConfigDB)
+	if err != nil {
+		log.Error().Err(err)
+
+		return
+	}
+	defer db.Close()
+
+	apiStorage := sqlapi.NewAPI(db)
+
+	sessionRow, err := apiStorage.GetSessionsByID(config.SessionTGID)
+	if err != nil {
+		log.Error().Err(err)
+
+		return
+	}
+
+	tgClient, err := tg_beholder.CreateTgBeholder( // получать настрйоки аккаунта из БД
+		sessionRow.PhoneNumber,
+		sessionRow.AppHash,
+		sessionRow.Sessiontxt,
+		sessionRow.AppID,
 		config.BeholderTG.SessionOptMin,
 		config.BeholderTG.SessionOptMax,
 		config.BeholderTG.CapChan,
 		ctx,
 	)
+
+	if err != nil {
+		log.Error().Err(err)
+
+		return
+	}
 
 	err = tgClient.Authorize()
 	if err != nil {
@@ -54,7 +84,7 @@ func main() {
 		return
 	}
 
-	wrk := CreateWork(log, kfk, &tgClient)
+	wrk := CreateWork(log, kfk, tgClient)
 
 	err = wrk.WorkerFunc(config.ConfigKfk.ProducerTopic, ctx)
 	if err != nil {
@@ -64,4 +94,33 @@ func main() {
 	}
 
 	log.Debug().Msg("process work finished successfully")
+}
+
+// connectDB ...
+func connectDB(cfg types.ConfigPsg) (*sqlx.DB, error) { // вынест в конфиги??
+	wp := "host=%s port=%s user=%s password=%s dbname=%s sslmode=%s"
+	connectionString := fmt.Sprintf(
+		wp,
+		cfg.Host,
+		cfg.Port,
+		cfg.User,
+		cfg.Password,
+		cfg.DBname,
+		cfg.SSLmode,
+	)
+
+	db, err := sqlx.Connect("postgres", connectionString)
+	if err != nil {
+		log.Error().Err(err).Msg("sqlx.Open failed")
+
+		return nil, err
+	}
+
+	if err := db.Ping(); err != nil {
+		log.Error().Err(err).Msg("DB.Ping failed")
+
+		return nil, err
+	}
+
+	return db, nil
 }

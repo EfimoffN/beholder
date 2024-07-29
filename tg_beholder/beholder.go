@@ -38,10 +38,6 @@ func (tgb *TgBeholder) CheckedPosts() error {
 			return nil
 		}
 
-		// получаем чат в который пересланно собщениеc
-		// ищем этот чат и ищем сообщение по Id сообщения и по Id группы в которой опулдикованно сообщениеctx
-		// получаем id обсуждения и отправляем дальше для комментраиев
-
 		ch, ok := pub.PeerID.(*tg.PeerChannel)
 		if !ok {
 			return nil
@@ -51,7 +47,7 @@ func (tgb *TgBeholder) CheckedPosts() error {
 			return nil
 		}
 
-		accessHash, err := tgb.SerchChannelByID(ch.ChannelID, pub.Replies.ChannelID, pub.Message)
+		messageIDChat, err := tgb.SerchChannelByID(ch.ChannelID, pub.Replies.ChannelID, pub.Message)
 		if err != nil {
 			return err
 		}
@@ -60,7 +56,7 @@ func (tgb *TgBeholder) CheckedPosts() error {
 			ChannelTgID:      ch.ChannelID,
 			ChatTgID:         pub.Replies.ChannelID,
 			MessageChannelID: int64(pub.ID),
-			MessageChatID:    int64(accessHash), проверить получение верности ID чата
+			MessageChatID:    messageIDChat,
 			Created:          int64(pub.Date),
 			TextMessage:      pub.Message,
 		}
@@ -69,9 +65,6 @@ func (tgb *TgBeholder) CheckedPosts() error {
 
 		return nil
 	})
-
-	// Create message sending helper.
-	// sender := message.NewSender(tgb.client.API())
 
 	tgb.dispatcher.OnNewMessage(func(ctx context.Context, e tg.Entities, update *tg.UpdateNewMessage) error {
 		// Don't echo service message.
@@ -84,8 +77,6 @@ func (tgb *TgBeholder) CheckedPosts() error {
 			return nil
 		}
 
-		// Echo received message.
-		// _, err := sender.Answer(e, update).Text(ctx, msg.Message)
 		return nil
 	})
 
@@ -140,14 +131,16 @@ func (tgb *TgBeholder) SerchChannelByID(channelID int64, peerChannelId int64, te
 		return accessHash, err
 	}
 
-	channelData, ok := channelList.GetChats()[0].(*tg.Channel)
-	if !ok {
-		return accessHash, errors.New("can not convert to channel")
+	chFull := tg.InputChannel{}
+	for _, channelData := range channelList.GetChats() {
+		channelD, ok := channelData.(*tg.Channel)
+		if ok && channelD.GetID() == channelID {
+			chFull.ChannelID = channelD.ID
+			chFull.AccessHash = channelD.AsInput().AccessHash
+		}
 	}
-
-	chFull := tg.InputChannel{
-		ChannelID:  channelData.ID,
-		AccessHash: channelData.AsInput().AccessHash,
+	if chFull.AccessHash == 0 {
+		return accessHash, errors.New("can not convert to channel")
 	}
 
 	resFull, err := api.ChannelsGetFullChannel(tgb.ctx, &chFull)
@@ -166,8 +159,6 @@ func (tgb *TgBeholder) SerchChannelByID(channelID int64, peerChannelId int64, te
 					Limit: 100,
 					Peer:  chA.AsInputPeer(),
 					Hash:  accessHash,
-					// MaxID: msgID + 1,
-					// MinID: msgID - 1,
 				}
 
 				messages, err := api.MessagesGetHistory(tgb.ctx, messagesRequest)
@@ -188,11 +179,7 @@ func (tgb *TgBeholder) SerchChannelByID(channelID int64, peerChannelId int64, te
 							from, ok := messageF.(*tg.PeerChannel)
 							if ok {
 								if from.ChannelID == channelID {
-									messageP := messagePeer.PeerID
-									peer, ok := messageP.(*tg.PeerChannel)
-									if ok {
-										return peer.ChannelID, nil
-									}
+									return int64(messagePeer.ID), nil
 								}
 							}
 						}
@@ -207,38 +194,4 @@ func (tgb *TgBeholder) SerchChannelByID(channelID int64, peerChannelId int64, te
 	}
 
 	return accessHash, nil
-}
-
-func (tgb *TgBeholder) getRepliesMessageChat(accessHash int64, chatId int64) (int, error) {
-	api := tgb.client.API()
-
-	peer := tg.InputPeerChat{
-		ChatID: chatId,
-	}
-
-	messagesRequest := &tg.MessagesGetHistoryRequest{
-		Limit: 100,
-		Peer:  &peer,
-		Hash:  accessHash,
-		// MaxID: msgID + 1,
-		// MinID: msgID - 1,
-	}
-
-	messages, err := api.MessagesGetHistory(tgb.ctx, messagesRequest)
-	if err != nil {
-		return 0, errors.New("can not get messages")
-	}
-
-	channelPosts, ok := messages.(*tg.MessagesChannelMessages)
-	if !ok {
-		return 0, errors.New("could not lead to the form messages channel messages")
-	}
-
-	for _, message := range channelPosts.Messages {
-		if message.GetID() == 0 {
-			return message.GetID(), nil
-		}
-	}
-
-	return 0, errors.New("not found message")
 }
