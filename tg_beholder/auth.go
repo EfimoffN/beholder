@@ -128,8 +128,7 @@ func CreateTgBeholder(
 	capChan int,
 	ctx context.Context,
 ) (*TgBeholder, error) {
-
-	fileStorage := "beholder_" + appHASH + ".json"
+	fileStorage := appHASH + "_beholder" + ".json"
 
 	err := createSession(fileStorage, []byte(sessionTgTxt))
 	if err != nil {

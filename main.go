@@ -53,7 +53,7 @@ func main() {
 		return
 	}
 
-	tgClient, err := tg_beholder.CreateTgBeholder( // получать настрйоки аккаунта из БД
+	tgClient, err := tg_beholder.CreateTgBeholder(
 		sessionRow.PhoneNumber,
 		sessionRow.AppHash,
 		sessionRow.Sessiontxt,
@@ -97,7 +97,7 @@ func main() {
 }
 
 // connectDB ...
-func connectDB(cfg types.ConfigPsg) (*sqlx.DB, error) { // вынест в конфиги??
+func connectDB(cfg types.ConfigPsg) (*sqlx.DB, error) {
 	wp := "host=%s port=%s user=%s password=%s dbname=%s sslmode=%s"
 	connectionString := fmt.Sprintf(
 		wp,
