@@ -38,6 +38,11 @@ func (tgb *TgBeholder) CheckedPosts() error {
 			return nil
 		}
 
+		_, ok = pub.FromID.(*tg.PeerUser)
+		if ok {
+			return nil
+		}
+
 		ch, ok := pub.PeerID.(*tg.PeerChannel)
 		if !ok {
 			return nil
@@ -66,19 +71,19 @@ func (tgb *TgBeholder) CheckedPosts() error {
 		return nil
 	})
 
-	tgb.dispatcher.OnNewMessage(func(ctx context.Context, e tg.Entities, update *tg.UpdateNewMessage) error {
-		// Don't echo service message.
-		msg, ok := update.Message.(*tg.Message)
-		if !ok {
-			return nil
-		}
+	// tgb.dispatcher.OnNewMessage(func(ctx context.Context, e tg.Entities, update *tg.UpdateNewMessage) error {
+	// 	// Don't echo service message.
+	// 	msg, ok := update.Message.(*tg.Message)
+	// 	if !ok {
+	// 		return nil
+	// 	}
 
-		if msg != nil {
-			return nil
-		}
+	// 	if msg != nil {
+	// 		return nil
+	// 	}
 
-		return nil
-	})
+	// 	return nil
+	// })
 
 	err = tgb.client.Run(tgb.ctx, func(ctx context.Context) error {
 		err = tgb.gupMsg.Run(tgb.ctx, api, self.ID, updates.AuthOptions{
@@ -195,3 +200,7 @@ func (tgb *TgBeholder) SerchChannelByID(channelID int64, peerChannelId int64, te
 
 	return accessHash, nil
 }
+
+// func (tgb *TgBeholder) markMessageRead(messageId int64, peerChannel ) error{
+
+// }
