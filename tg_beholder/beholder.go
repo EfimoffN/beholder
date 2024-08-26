@@ -52,6 +52,16 @@ func (tgb *TgBeholder) CheckedPosts() error {
 			return nil
 		}
 
+		for _, ent := range e.Channels {
+			if ent.ID == ch.ChannelID {
+				err := tgb.markMessageRead(pub.ID, ch.ChannelID, ent.AsInputPeer())
+				if err != nil {
+					log.Info(err.Error())
+					return nil
+				}
+			}
+		}
+
 		messageIDChat, err := tgb.SerchChannelByID(ch.ChannelID, pub.Replies.ChannelID, pub.Message)
 		if err != nil {
 			return err
@@ -115,6 +125,7 @@ func (tgb *TgBeholder) CheckedPosts() error {
 	return nil
 }
 
+// переписать поиск пбликации используя прищедшие наьоры групп и чатов с сообщением
 func (tgb *TgBeholder) SerchChannelByID(channelID int64, peerChannelId int64, textMsg string) (int64, error) {
 	api := tgb.client.API()
 	var accessHash int64 = 0
@@ -201,6 +212,26 @@ func (tgb *TgBeholder) SerchChannelByID(channelID int64, peerChannelId int64, te
 	return accessHash, nil
 }
 
-// func (tgb *TgBeholder) markMessageRead(messageId int64, peerChannel ) error{
+func (tgb *TgBeholder) markMessageRead(messageId int, channelID int64, peer tg.InputPeerClass) error {
+	api := tgb.client.API()
 
-// }
+	mrkReq := tg.ChannelsReadHistoryRequest{
+		MaxID: messageId,
+		Channel: &tg.InputChannelFromMessage{
+			ChannelID: channelID,
+			MsgID:     messageId,
+			Peer:      peer,
+		},
+	}
+
+	mrk, err := api.ChannelsReadHistory(tgb.ctx, &mrkReq)
+	if !mrk {
+		return nil
+	}
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
