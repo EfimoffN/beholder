@@ -16,6 +16,7 @@ import (
 	updhook "github.com/gotd/td/telegram/updates/hook"
 	"github.com/gotd/td/tg"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog"
 	"go.uber.org/zap"
 )
 
@@ -119,6 +120,7 @@ func (tgb *TgBeholder) Stop() {
 }
 
 func CreateTgBeholder(
+	log zerolog.Logger,
 	phoneNumber,
 	appHASH,
 	sessionTgTxt string,
@@ -132,6 +134,8 @@ func CreateTgBeholder(
 
 	err := createSession(fileStorage, []byte(sessionTgTxt))
 	if err != nil {
+		log.Error().Err(err)
+
 		return nil, err
 	}
 
@@ -153,7 +157,6 @@ func CreateTgBeholder(
 func createSession(name string, val []byte) error {
 	_, err := os.Stat(name)
 	if os.IsExist(err) {
-
 		return errAlreadyExists
 	}
 

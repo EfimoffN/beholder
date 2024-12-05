@@ -10,8 +10,7 @@ import (
 )
 
 var (
-	ErrSessionsNotFound = errors.New("Sessions not found by ID")
-
+	ErrSessionsNotFound  = errors.New("Sessions not found by ID")
 	ErrClientFoundAlotOf = errors.New("Many clients have been detected")
 )
 

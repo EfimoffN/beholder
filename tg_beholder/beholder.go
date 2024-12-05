@@ -2,7 +2,9 @@ package tg_beholder
 
 import (
 	"context"
+	"math/rand"
 	"strconv"
+	"time"
 
 	"github.com/EfimoffN/beholder/types"
 	"github.com/gotd/td/telegram/updates"
@@ -29,11 +31,9 @@ func (tgb *TgBeholder) CheckedPosts() error {
 			log.Info("Message", zap.Any("message", update.Message))
 		}
 
-		log.Info("Channel message", zap.Any("message", update.Message))
+		log.Debug("Channel message", zap.Any("message", update.Message))
 
-		message := update.Message
-
-		pub, ok := message.(*tg.Message)
+		pub, ok := update.Message.(*tg.Message)
 		if !ok {
 			return nil
 		}
@@ -52,19 +52,34 @@ func (tgb *TgBeholder) CheckedPosts() error {
 			return nil
 		}
 
+		var chat = tg.Channel{}
 		for _, ent := range e.Channels {
 			if ent.ID == ch.ChannelID {
 				err := tgb.markMessageRead(pub.ID, ch.ChannelID, ent.AsInputPeer())
 				if err != nil {
-					log.Info(err.Error())
+					log.Error(err.Error())
+
 					return nil
 				}
 			}
+
+			if ent.ID == pub.Replies.ChannelID {
+				chat = *ent
+			}
 		}
 
-		messageIDChat, err := tgb.SerchChannelByID(ch.ChannelID, pub.Replies.ChannelID, pub.Message)
+		if chat.ID == 0 && chat.AccessHash == 0 {
+			return nil
+		}
+
+		messageIDChat, err := tgb.SerchChatMsgID(ch.ChannelID, &chat)
 		if err != nil {
-			return err
+			messageIDChannel, err := tgb.SerchChannelByID(ch.ChannelID, chat.ID)
+			if err != nil {
+				log.Debug(err.Error())
+				return nil
+			}
+			messageIDChat = messageIDChannel
 		}
 
 		acceptedPublication := types.AcceptedPublication2{
@@ -76,29 +91,17 @@ func (tgb *TgBeholder) CheckedPosts() error {
 			TextMessage:      pub.Message,
 		}
 
+		log.Debug("accepted publication", zap.Any("publication", acceptedPublication))
+
 		tgb.PostSend <- acceptedPublication
 
 		return nil
 	})
 
-	// tgb.dispatcher.OnNewMessage(func(ctx context.Context, e tg.Entities, update *tg.UpdateNewMessage) error {
-	// 	// Don't echo service message.
-	// 	msg, ok := update.Message.(*tg.Message)
-	// 	if !ok {
-	// 		return nil
-	// 	}
-
-	// 	if msg != nil {
-	// 		return nil
-	// 	}
-
-	// 	return nil
-	// })
-
 	err = tgb.client.Run(tgb.ctx, func(ctx context.Context) error {
 		err = tgb.gupMsg.Run(tgb.ctx, api, self.ID, updates.AuthOptions{
 			OnStart: func(ctx context.Context) {
-				log.Info("Gaps started")
+				log.Info("tgb.client Gaps started")
 			},
 		})
 
@@ -112,7 +115,7 @@ func (tgb *TgBeholder) CheckedPosts() error {
 
 	err = tgb.gupMsg.Run(tgb.ctx, api, self.ID, updates.AuthOptions{
 		OnStart: func(ctx context.Context) {
-			log.Info("Gaps started")
+			log.Info("tgb.gupMsg Gaps started")
 		},
 	})
 
@@ -125,8 +128,54 @@ func (tgb *TgBeholder) CheckedPosts() error {
 	return nil
 }
 
-// переписать поиск пбликации используя прищедшие наьоры групп и чатов с сообщением
-func (tgb *TgBeholder) SerchChannelByID(channelID int64, peerChannelId int64, textMsg string) (int64, error) {
+func (tgb *TgBeholder) SerchChatMsgID(channelID int64, chat *tg.Channel) (int64, error) {
+	api := tgb.client.API()
+
+	messagesRequest := &tg.MessagesGetHistoryRequest{
+		Limit: 100,
+		Peer:  chat.AsInputPeer(),
+		Hash:  chat.AccessHash,
+	}
+
+	messages, err := api.MessagesGetHistory(tgb.ctx, messagesRequest)
+	if err != nil {
+		err := errors.New("can not get messages")
+		tgb.Logger.Error().Err(err)
+
+		return 0, err
+	}
+
+	if messages == nil {
+		err := errors.New("messages is nill")
+		tgb.Logger.Error().Err(err)
+
+		return 0, err
+	}
+
+	msg, ok := messages.(*tg.MessagesChannelMessages)
+	if ok {
+		for _, message := range msg.Messages {
+			messagePeer, ok := message.(*tg.Message)
+			if ok {
+				messageF := messagePeer.FromID
+				from, ok := messageF.(*tg.PeerChannel)
+				if ok {
+					if from.ChannelID == channelID {
+						return int64(messagePeer.ID), nil
+					}
+				}
+			}
+		}
+	}
+
+	err = errors.New("message not found")
+	tgb.Logger.Error().Err(err)
+
+	return 0, err
+}
+
+// // переписать поиск пбликации используя прищедшие наьоры групп и чатов с сообщением
+func (tgb *TgBeholder) SerchChannelByID(channelID int64, peerChannelId int64) (int64, error) {
 	api := tgb.client.API()
 	var accessHash int64 = 0
 
@@ -138,11 +187,14 @@ func (tgb *TgBeholder) SerchChannelByID(channelID int64, peerChannelId int64, te
 
 	channelList, err := api.ChannelsGetChannels(tgb.ctx, req)
 	if err != nil {
+		tgb.Logger.Error().Err(err)
+
 		return accessHash, err
 	}
 
 	if channelList.Zero() {
 		err := errors.New("channel not found")
+		tgb.Logger.Error().Err(err)
 
 		return accessHash, err
 	}
@@ -156,12 +208,17 @@ func (tgb *TgBeholder) SerchChannelByID(channelID int64, peerChannelId int64, te
 		}
 	}
 	if chFull.AccessHash == 0 {
-		return accessHash, errors.New("can not convert to channel")
+		err := errors.New("can not convert to channel")
+		tgb.Logger.Error().Err(err)
+
+		return accessHash, err
 	}
 
 	resFull, err := api.ChannelsGetFullChannel(tgb.ctx, &chFull)
 	if err != nil {
 		err = errors.Wrapf(err, "can't find the channel by ID: '%s'", strconv.FormatInt(channelID, 10))
+		tgb.Logger.Error().Err(err)
+
 		return accessHash, err
 	}
 
@@ -179,7 +236,10 @@ func (tgb *TgBeholder) SerchChannelByID(channelID int64, peerChannelId int64, te
 
 				messages, err := api.MessagesGetHistory(tgb.ctx, messagesRequest)
 				if err != nil {
-					return 0, errors.New("can not get messages")
+					err := errors.New("can not get messages")
+					tgb.Logger.Error().Err(err)
+
+					return 0, err
 				}
 
 				if messages == nil {
@@ -206,7 +266,10 @@ func (tgb *TgBeholder) SerchChannelByID(channelID int64, peerChannelId int64, te
 	}
 
 	if accessHash == 0 {
-		return accessHash, errors.New("can not found comments chat")
+		err := errors.New("can not found comments chat")
+		tgb.Logger.Error().Err(err)
+
+		return accessHash, err
 	}
 
 	return accessHash, nil
@@ -230,8 +293,15 @@ func (tgb *TgBeholder) markMessageRead(messageId int, channelID int64, peer tg.I
 	}
 
 	if err != nil {
+		tgb.Logger.Error().Err(err)
+
 		return err
 	}
 
+	time.Sleep(time.Duration(RandInt(2000, 4000)) * time.Millisecond)
 	return nil
+}
+
+func RandInt(min, max int) int {
+	return rand.Intn(max-min+1) + min
 }

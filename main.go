@@ -54,6 +54,7 @@ func main() {
 	}
 
 	tgClient, err := tg_beholder.CreateTgBeholder(
+		log,
 		sessionRow.PhoneNumber,
 		sessionRow.AppHash,
 		sessionRow.Sessiontxt,
@@ -63,7 +64,6 @@ func main() {
 		config.BeholderTG.CapChan,
 		ctx,
 	)
-
 	if err != nil {
 		log.Error().Err(err)
 
