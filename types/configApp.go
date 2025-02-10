@@ -28,11 +28,9 @@ type ProducerKfk struct {
 	ProducerBroker string `required:"true"`
 }
 
-type AcceptedPublication2 struct {
-	ChannelTgID      int64  `json:"ChannelTgID"`
-	ChatTgID         int64  `json:"ChatTgID"`
-	MessageChannelID int64  `json:"MessageChannelID"`
-	MessageChatID    int64  `json:"MessageChatID"`
-	Created          int64  `json:"Created"`
-	TextMessage      string `json:"TextMessage"`
+type AcceptedPublication struct {
+	ChannelTgID      int64 `json:"ChannelTgID"`
+	MessageChannelID int64 `json:"MessageChannelID"`
+	CreatedDate      int64 `json:"CreatedDate"`
+	EditDate         int64 `json:"EditDate"`
 }

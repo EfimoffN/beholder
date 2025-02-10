@@ -26,7 +26,7 @@ type TgBeholder struct {
 	dispatcher tg.UpdateDispatcher
 
 	// PostSend chan (types.AcceptedPublication)
-	PostSend chan (types.AcceptedPublication2)
+	PostSend chan (types.AcceptedPublication)
 }
 
 type SessionData struct {
